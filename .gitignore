@@ -6,3 +6,12 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .DS_Store
+
+# Pilot worktrees (created by scripts/create-worktrees.sh)
+.worktrees/
+
+# gstack scratch directory
+.gstack/
+
+# Pilot data (SQLite + eval runs)
+.data/

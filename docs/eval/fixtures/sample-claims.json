@@ -1,0 +1,177 @@
+[
+  {
+    "claimId": "claim-fixture-001",
+    "patientId": "patient-fixture",
+    "inputId": "input-fixture-001",
+    "claimText": "Patient reported blood in vomit and a brief fainting episode this morning.",
+    "originalClaimText": null,
+    "eventType": "vomiting",
+    "eventTime": "this morning",
+    "confidence": 0.97,
+    "evidence": {
+      "evidenceText": "blood in my vomit and I fainted briefly",
+      "sourceType": "text",
+      "sourceId": "input-fixture-001",
+      "startChar": 6,
+      "endChar": 45,
+      "transcriptOffsetMs": null,
+      "imageRegion": null
+    },
+    "attributes": {
+      "redFlag": "blood_in_vomit",
+      "fainting": true
+    },
+    "missingInfo": [
+      "duration of fainting",
+      "current mental state",
+      "hydration status"
+    ],
+    "riskLevel": "urgent",
+    "safetyStatus": "safe",
+    "doctorReviewStatus": "pending",
+    "doctorEditOrigin": null,
+    "extractionType": "direct",
+    "displayWarning": null,
+    "createdAt": "2026-04-26T16:00:10Z",
+    "expected_doctor_action": "accept"
+  },
+  {
+    "claimId": "claim-fixture-002",
+    "patientId": "patient-fixture",
+    "inputId": "input-fixture-002",
+    "claimText": "Patient skipped a prescribed antibiotic dose.",
+    "originalClaimText": null,
+    "eventType": "missedMedication",
+    "eventTime": "yesterday",
+    "confidence": 0.91,
+    "evidence": {
+      "evidenceText": "I skipped my antibiotic",
+      "sourceType": "text",
+      "sourceId": "input-fixture-002",
+      "startChar": 10,
+      "endChar": 33,
+      "transcriptOffsetMs": null,
+      "imageRegion": null
+    },
+    "attributes": {
+      "medicationCategory": "antibiotic"
+    },
+    "missingInfo": [
+      "medication name",
+      "dose",
+      "scheduled time",
+      "reason for skipped dose",
+      "whether patient resumed medication"
+    ],
+    "riskLevel": "medium",
+    "safetyStatus": "medicationAdviceBlocked",
+    "doctorReviewStatus": "pending",
+    "doctorEditOrigin": null,
+    "extractionType": "direct",
+    "displayWarning": null,
+    "createdAt": "2026-04-26T16:05:00Z",
+    "expected_doctor_action": "edit_minor_wording"
+  },
+  {
+    "claimId": "claim-fixture-003",
+    "patientId": "patient-fixture",
+    "inputId": "input-fixture-003",
+    "claimText": "Patient may have a viral gastrointestinal illness.",
+    "originalClaimText": null,
+    "eventType": "stomachPain",
+    "eventTime": "today",
+    "confidence": 0.48,
+    "evidence": {
+      "evidenceText": "felt weird",
+      "sourceType": "text",
+      "sourceId": "input-fixture-003",
+      "startChar": 2,
+      "endChar": 12,
+      "transcriptOffsetMs": null,
+      "imageRegion": null
+    },
+    "attributes": {},
+    "missingInfo": [
+      "specific symptoms",
+      "duration",
+      "severity",
+      "onset time"
+    ],
+    "riskLevel": "needs-review",
+    "safetyStatus": "needsReview",
+    "doctorReviewStatus": "pending",
+    "doctorEditOrigin": null,
+    "extractionType": "interpretation",
+    "displayWarning": "Interpretation, not a direct quote — review carefully.",
+    "createdAt": "2026-04-27T11:30:00Z",
+    "expected_doctor_action": "edit_correction"
+  },
+  {
+    "claimId": "claim-fixture-004",
+    "patientId": "patient-fixture",
+    "inputId": "input-fixture-004",
+    "claimText": "Patient believes symptoms may be related to food poisoning. Diagnosis not confirmed.",
+    "originalClaimText": null,
+    "eventType": "patientConcern",
+    "eventTime": null,
+    "confidence": 0.88,
+    "evidence": {
+      "evidenceText": "I think I have food poisoning",
+      "sourceType": "text",
+      "sourceId": "input-fixture-004",
+      "startChar": 0,
+      "endChar": 29,
+      "transcriptOffsetMs": null,
+      "imageRegion": null
+    },
+    "attributes": {
+      "patientStatedDiagnosis": "food poisoning"
+    },
+    "missingInfo": [
+      "food source",
+      "onset time",
+      "associated symptoms"
+    ],
+    "riskLevel": "low",
+    "safetyStatus": "diagnosisNotConfirmed",
+    "doctorReviewStatus": "pending",
+    "doctorEditOrigin": null,
+    "extractionType": "direct",
+    "displayWarning": null,
+    "createdAt": "2026-04-28T09:15:00Z",
+    "expected_doctor_action": "edit_external_knowledge_override"
+  },
+  {
+    "claimId": "claim-fixture-005",
+    "patientId": "patient-fixture",
+    "inputId": "input-fixture-005",
+    "claimText": "Patient experienced significant gastrointestinal distress after eating dairy.",
+    "originalClaimText": null,
+    "eventType": "possibleFoodTrigger",
+    "eventTime": "after lunch",
+    "confidence": 0.39,
+    "evidence": {
+      "evidenceText": "felt a bit off",
+      "sourceType": "text",
+      "sourceId": "input-fixture-005",
+      "startChar": 2,
+      "endChar": 16,
+      "transcriptOffsetMs": null,
+      "imageRegion": null
+    },
+    "attributes": {},
+    "missingInfo": [
+      "specific symptoms",
+      "severity",
+      "trigger food confirmed"
+    ],
+    "riskLevel": "needs-review",
+    "safetyStatus": "needsReview",
+    "doctorReviewStatus": "pending",
+    "doctorEditOrigin": null,
+    "extractionType": "interpretation",
+    "displayWarning": "Low confidence and inferred beyond evidence — likely overreach.",
+    "createdAt": "2026-04-29T13:45:00Z",
+    "expected_doctor_action": "reject"
+  }
+]
