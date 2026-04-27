@@ -36,13 +36,9 @@ verify-wt-01:
 	@exit 1
 
 verify-wt-02:
-	@echo "verify-wt-02: not yet implemented in Phase 1"
-	@echo ""
-	@echo "Phase 2 (wt/02) will run, in order:"
-	@echo "  cd services/web && bun run typecheck"
-	@echo "  cd services/web && bun run lint"
-	@echo "  cd services/web && bun run test --coverage"
-	@exit 1
+	cd services/web && bun run typecheck
+	cd services/web && bun run lint
+	cd services/web && bun run test --coverage
 
 eval:
 	@echo "eval: not yet implemented in Phase 1"
