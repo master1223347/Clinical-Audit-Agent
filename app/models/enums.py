@@ -34,6 +34,9 @@ class RiskLevel(str, Enum):
     MEDIUM = "medium"
     HIGH = "high"
     URGENT = "urgent"
+    # Appendix A.1 — interpretation claims with content-word overlap < 0.5 are
+    # force-downgraded here; the audit card renders a "needs review" badge.
+    NEEDS_REVIEW = "needs-review"
 
 
 class SafetyStatus(str, Enum):
@@ -54,3 +57,18 @@ class DoctorAction(str, Enum):
     ACCEPTED = "accepted"
     EDITED = "edited"
     REJECTED = "rejected"
+
+
+class ExtractionType(str, Enum):
+    """Appendix A.1 — direct vs. interpretation grading."""
+
+    DIRECT = "direct"
+    INTERPRETATION = "interpretation"
+
+
+class DoctorEditOrigin(str, Enum):
+    """Appendix A.3 — self-classification a doctor selects when saving an edit."""
+
+    MINOR_WORDING = "minor_wording"
+    CORRECTION = "correction"
+    EXTERNAL_KNOWLEDGE_OVERRIDE = "external_knowledge_override"
