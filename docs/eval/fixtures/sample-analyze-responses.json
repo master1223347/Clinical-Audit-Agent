@@ -1,0 +1,23 @@
+[
+  {
+    "inputId": "t06",
+    "promptVersionHash": "fixture-v1",
+    "modelId": "fixture",
+    "patientId": "synthetic-006",
+    "escalationMessage": "This may be urgent. Please seek emergency medical help now if you are experiencing severe symptoms.",
+    "redFlagOnlySpans": [
+      {
+        "ruleKey": "severe_breathing_difficulty",
+        "text": "Very hard to breathe",
+        "start": 0,
+        "end": 20
+      },
+      {
+        "ruleKey": "chest_pain",
+        "text": "Chest feels very tight and painful",
+        "start": 36,
+        "end": 70
+      }
+    ]
+  }
+]
