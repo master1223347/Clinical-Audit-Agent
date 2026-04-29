@@ -1,9 +1,15 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import type { AnalyzeResponse } from "@shared/types";
 import ReviewPage from "@/components/ReviewPage";
 import { getAnalyzeResponseFor, listTranscripts } from "@/lib/fixtures";
+
+vi.mock("@/lib/api", () => ({
+  fetchAnalyzeResponse: vi.fn().mockResolvedValue(null),
+  postReviewClaim: vi.fn().mockResolvedValue(undefined),
+}));
 
 function urgentTranscript() {
   const t = listTranscripts().find((x) => x.inputId === "input-fixture-001")!;
@@ -180,5 +186,46 @@ describe("ReviewPage", () => {
     expect(lower).not.toContain("debug");
     expect(lower).not.toContain("test mode");
     expect(lower).not.toContain("reviewer mode");
+  });
+
+  test("renders escalation banner and red-flag spans even when claims array is empty", () => {
+    // Structural invariant (pilot.md §2, C4): escalationMessage and
+    // redFlagOnlySpans live on the response, not on individual claims.
+    // Doctor actions on claims must not suppress the response-level escalation.
+    const rawText =
+      "Patient said blood in vomit and cannot keep fluids down today.";
+    const bloodPhrase = "blood in vomit";
+    const startChar = rawText.indexOf(bloodPhrase);
+    const zeroClaimResponse: AnalyzeResponse = {
+      inputId: "zero-claim-test",
+      promptVersionHash: "live-v1",
+      modelId: "claude-sonnet-4-6",
+      claims: [],
+      escalationMessage:
+        "This may be urgent. Please seek emergency medical help now if you are experiencing severe symptoms.",
+      redFlagOnlySpans: [
+        { startChar, endChar: startChar + bloodPhrase.length, ruleKey: "blood_in_vomit" },
+      ],
+      createdAt: new Date(0).toISOString(),
+    };
+
+    render(
+      <ReviewPage
+        title="Zero-claim urgent transcript"
+        rawText={rawText}
+        response={zeroClaimResponse}
+      />,
+    );
+
+    // Response-level escalation banner must render regardless of claim count
+    const banner = screen.getByRole("alert");
+    expect(banner.textContent).toMatch(/urgent|emergency/i);
+
+    // No claim audit cards
+    expect(screen.queryAllByRole("article")).toHaveLength(0);
+
+    // DualLayerInputView must render the red-flag span without crashing
+    const mark = screen.getByRole("mark", { name: /red-flag/i });
+    expect(mark.textContent).toBe(bloodPhrase);
   });
 });

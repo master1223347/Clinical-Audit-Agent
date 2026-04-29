@@ -13,6 +13,7 @@ import ClaimEditModal, {
 import DualLayerInputView, {
   type EvidenceSpan,
 } from "@/components/DualLayerInputView";
+import { postReviewClaim } from "@/lib/api";
 
 export interface ReviewPageProps {
   title: string;
@@ -58,17 +59,17 @@ export default function ReviewPage({
   }
 
   function handleAccept(claimId: string): void {
-    updateClaim(claimId, (c) => ({
-      ...c,
-      doctorReviewStatus: "accepted",
-    }));
+    updateClaim(claimId, (c) => ({ ...c, doctorReviewStatus: "accepted" }));
+    postReviewClaim({ claimId, action: "accepted" }).catch((err: unknown) =>
+      console.error("postReviewClaim failed:", err),
+    );
   }
 
   function handleReject(claimId: string): void {
-    updateClaim(claimId, (c) => ({
-      ...c,
-      doctorReviewStatus: "rejected",
-    }));
+    updateClaim(claimId, (c) => ({ ...c, doctorReviewStatus: "rejected" }));
+    postReviewClaim({ claimId, action: "rejected" }).catch((err: unknown) =>
+      console.error("postReviewClaim failed:", err),
+    );
   }
 
   function handleEditRequest(claimId: string): void {
@@ -86,6 +87,15 @@ export default function ReviewPage({
       doctorEditOrigin: payload.doctorEditOrigin,
     }));
     setEditingClaimId(null);
+    postReviewClaim({
+      claimId: payload.claimId,
+      action: "edited",
+      correctedClaim: payload.correctedClaim,
+      doctorEditOrigin: payload.doctorEditOrigin,
+      reason: payload.reason,
+    }).catch((err: unknown) =>
+      console.error("postReviewClaim failed:", err),
+    );
   }
 
   function handleCancelEdit(): void {
