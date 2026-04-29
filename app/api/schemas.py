@@ -1,54 +1,46 @@
-"""Request/response schemas for §11 API behaviors.
+"""Request/response schemas for §11 API behaviors."""
 
-These wrap internal types — endpoint handlers convert
-`pipeline.AnalysisResult` -> `AnalyzeResponse` and so on.
-"""
+import re
 
-from datetime import date
+from pydantic import BaseModel, Field, field_validator
 
-from pydantic import BaseModel, Field
-
-from app.metrics import QualityMetrics
-from app.models import (
-    ClinicalClaim,
-    DoctorReport,
-    FollowUpQuestion,
-    PatternCard,
-    RiskAssessment,
-    SafetyBlock,
-    TimelineEntry,
-)
+from app.models.analyze import AnalyzeResponse  # noqa: F401 — re-exported
 from app.models.context import TrackingContext
-from app.models.enums import DoctorAction, DoctorReviewStatus, InputType
+from app.models.enums import DoctorAction, DoctorEditOrigin, DoctorReviewStatus, InputType
+
+_MAX_RAW_TEXT = 20_000
+_MAX_CLAIM_TEXT = 2_000
+_UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
 
 
 class AnalyzeRequest(BaseModel):
     """§11.1."""
 
-    patientId: str
-    inputType: InputType
-    rawText: str
+    patientId: str = Field(max_length=128)
+    inputType: InputType = InputType.TEXT
+    rawText: str = Field(min_length=1, max_length=_MAX_RAW_TEXT)
     context: TrackingContext = Field(default_factory=TrackingContext)
 
 
-class AnalyzeResponse(BaseModel):
-    """§11.1."""
-
-    inputId: str
-    claims: list[ClinicalClaim]
-    riskAssessment: RiskAssessment | None = None
-    followUpQuestions: list[FollowUpQuestion] = Field(default_factory=list)
-    safetyBlocks: list[SafetyBlock] = Field(default_factory=list)
-
-
 class ReviewClaimRequest(BaseModel):
-    """§11.2."""
+    """§11.2 — includes doctorEditOrigin per Appendix A.3."""
 
-    doctorId: str
+    doctorId: str = Field(max_length=128)
     claimId: str
     action: DoctorAction
-    correctedClaim: str | None = None
-    reason: str | None = None
+    correctedClaim: str | None = Field(default=None, max_length=_MAX_CLAIM_TEXT)
+    doctorEditOrigin: DoctorEditOrigin | None = None
+    reason: str | None = Field(default=None, max_length=1_000)
+
+    @field_validator("claimId")
+    @classmethod
+    def claim_id_must_be_uuid(cls, v: str) -> str:
+        if not _UUID_RE.match(v):
+            raise ValueError("claimId must be a UUID")
+        return v
 
 
 class ReviewClaimResponse(BaseModel):
@@ -59,48 +51,18 @@ class ReviewClaimResponse(BaseModel):
     finalClaimText: str
 
 
-class GenerateReportRequest(BaseModel):
-    """§11.3."""
+class PrecomputeItem(BaseModel):
+    """One transcript entry for POST /precompute."""
 
-    patientId: str
-    startDate: date
-    endDate: date
-    includePendingClaims: bool = False
-
-
-class GenerateReportResponse(BaseModel):
-    """§11.3 — concrete shape derived from `DoctorReport`."""
-
-    reportId: str
-    patientSummary: dict = Field(default_factory=dict)
-    timeline: list[TimelineEntry] = Field(default_factory=list)
-    medicationNotes: list[str] = Field(default_factory=list)
-    redFlagReview: dict = Field(default_factory=dict)
-    missingInfo: list[str] = Field(default_factory=list)
-    doctorDiscussionPoints: list[str] = Field(default_factory=list)
-
-    @classmethod
-    def from_report(cls, report: DoctorReport) -> "GenerateReportResponse":
-        return cls(
-            reportId=report.reportId,
-            patientSummary=report.patientSummary,
-            timeline=report.timeline,
-            medicationNotes=report.medicationNotes,
-            redFlagReview=report.redFlagReview,
-            missingInfo=report.missingInfo,
-            doctorDiscussionPoints=report.doctorDiscussionPoints,
-        )
+    transcript_id: str = Field(max_length=128)
+    raw_text: str = Field(min_length=1, max_length=_MAX_RAW_TEXT)
+    patient_id: str = Field(default="pilot-patient", max_length=128)
+    context: TrackingContext = Field(default_factory=TrackingContext)
 
 
-class MetricsResponse(BaseModel):
-    """§10.6 / §15."""
+class PrecomputeResponse(BaseModel):
+    """POST /precompute response."""
 
-    metrics: QualityMetrics
-    topRejectedEventTypes: list[str] = Field(default_factory=list)
-    topMissingFields: list[str] = Field(default_factory=list)
-
-
-class PatternsResponse(BaseModel):
-    """§19 Phase 5."""
-
-    patterns: list[PatternCard]
+    cached: int
+    refreshed: int
+    total: int

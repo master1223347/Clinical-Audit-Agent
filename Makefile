@@ -1,23 +1,18 @@
 # Clinical Proof Mode pilot — root Makefile.
 #
-# Phase 1 (schema gate, this commit): every target prints what Phase 2 will run
-# and exits 1. The commands are listed verbatim so reviewers can see the gate
-# without running it. Real implementations land in Phase 2 alongside the modules
-# they invoke.
-#
 # Coverage gates (pilot.md §1.6, wt-01.md step 6):
 #   General   pytest --cov=app --cov-branch --cov-fail-under=80
 #   Safety    pytest --cov=app/core/safety --cov=app/rules/blocked_advice \
 #             --cov-branch --cov-fail-under=100
 
-PYTHON ?= .venv/bin/python
-PYTEST ?= .venv/bin/pytest
+PYTHON ?= python3
+PYTEST ?= python3 -m pytest
 
 .PHONY: help verify-wt-01 verify-wt-02 eval demo precompute precompute-fresh
 
 help:
-	@echo "Clinical Proof Mode pilot — Phase 1 (schema gate). Targets:"
-	@echo "  verify-wt-01      backend verification loop (Phase 2)"
+	@echo "Clinical Proof Mode pilot targets:"
+	@echo "  verify-wt-01      backend verification loop"
 	@echo "  verify-wt-02      doctor-portal verification loop (Phase 2)"
 	@echo "  eval              run the eval harness (Phase 2 fixture / Phase 3 live)"
 	@echo "  demo              start the localhost demo against the precompute cache"
@@ -25,15 +20,11 @@ help:
 	@echo "  precompute-fresh  destructive: truncate analyze_responses + claims, then re-run"
 
 verify-wt-01:
-	@echo "verify-wt-01: not yet implemented in Phase 1"
-	@echo ""
-	@echo "Phase 2 will run, in order:"
-	@echo "  $(PYTEST) tests/"
-	@echo "  ruff check app/"
-	@echo "  $(PYTHON) scripts/check-schema-drift.py"
-	@echo "  $(PYTEST) --cov=app --cov-branch --cov-fail-under=80"
-	@echo "  $(PYTEST) --cov=app/core/safety --cov=app/rules/blocked_advice --cov-branch --cov-fail-under=100"
-	@exit 1
+	$(PYTEST) tests/
+	$(PYTHON) -m ruff check app/
+	$(PYTHON) scripts/check-schema-drift.py
+	$(PYTEST) --cov=app --cov-branch --cov-fail-under=80
+	$(PYTEST) tests/safety/ --cov=app.core.safety --cov=app.rules.blocked_advice --cov-branch --cov-fail-under=100
 
 verify-wt-02:
 	cd services/web && bun run typecheck
