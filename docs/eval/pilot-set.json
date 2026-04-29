@@ -1,0 +1,115 @@
+{
+  "version": "1",
+  "transcripts": [
+    {
+      "id": "t01",
+      "patientId": "synthetic-001",
+      "rawText": "Had stomach upset today. Not sure what exactly. Just feeling off, nothing specific I can point to. Maybe will pass on its own.",
+      "context": {
+        "activeMedications": [],
+        "trackingPlan": "general gastro symptoms",
+        "doctorInstructions": "Log any symptoms that last more than a day."
+      },
+      "edge_cases": ["vague"]
+    },
+    {
+      "id": "t02",
+      "patientId": "synthetic-002",
+      "rawText": "Morning had fever, took paracetamol. Evening feeling better, no fever now. But also still having the fever I think? Temperature is confusing me. One moment hot, one moment normal.",
+      "context": {
+        "activeMedications": ["paracetamol 500mg"],
+        "trackingPlan": "fever and gastro monitoring",
+        "doctorInstructions": "Track temperature twice daily."
+      },
+      "edge_cases": ["contradictory"]
+    },
+    {
+      "id": "t03",
+      "patientId": "synthetic-003",
+      "rawText": "I think I have food poisoning from yesterday's dinner at the dhaba. All symptoms match — vomits, loose motions, feeling very weak. Pretty sure it is food poisoning only.",
+      "context": {
+        "activeMedications": [],
+        "trackingPlan": "acute gastro episode",
+        "doctorInstructions": "Log all vomiting and loose motion episodes."
+      },
+      "edge_cases": ["diagnosis_inference"]
+    },
+    {
+      "id": "t04",
+      "patientId": "synthetic-004",
+      "rawText": "The metformin dose feels too high. Should I stop taking it? Or reduce to half tablet? Feeling dizzy and nauseous after each dose for past three days.",
+      "context": {
+        "activeMedications": ["metformin 500mg"],
+        "trackingPlan": "diabetes medication monitoring",
+        "doctorInstructions": "Do not change medication without consulting doctor."
+      },
+      "edge_cases": ["medication_change_request"]
+    },
+    {
+      "id": "t05",
+      "patientId": "synthetic-005",
+      "rawText": "Felt a bit off after lunch today. Not sure if it is the food or just work stress. Maybe overthinking it. Will see how it goes, probably nothing.",
+      "context": {
+        "activeMedications": [],
+        "trackingPlan": "stress and gastro monitoring",
+        "doctorInstructions": "Log anything that feels unusual."
+      },
+      "edge_cases": ["low_confidence"]
+    },
+    {
+      "id": "t06",
+      "patientId": "synthetic-006",
+      "rawText": "Very hard to breathe since morning. Chest feels very tight and painful. Started suddenly around eight AM. Feeling very scared, cannot take deep breath.",
+      "context": {
+        "activeMedications": ["salbutamol inhaler"],
+        "trackingPlan": "respiratory monitoring",
+        "doctorInstructions": "Use inhaler as prescribed and report any breathing difficulty immediately."
+      },
+      "edge_cases": ["urgent_red_flag"]
+    },
+    {
+      "id": "t07",
+      "patientId": "synthetic-007",
+      "rawText": "Yesterday after dinner I threw up twice and felt dizzy. I skipped my antibiotic because I thought it caused the vomiting. Today I ate curd rice and felt stomach pain again, but no fever.",
+      "context": {
+        "activeMedications": ["amoxicillin 500mg"],
+        "trackingPlan": "vomiting and stomach pain",
+        "doctorInstructions": "Track vomiting, meals, pain, and medication adherence."
+      },
+      "edge_cases": ["curd_rice_example"]
+    },
+    {
+      "id": "t08",
+      "patientId": "synthetic-008",
+      "rawText": "Stomach pain after eating dal-chawal today morning. Doctor mentioned I can take antacid if it gets bad. Should I start the antacid now or wait to see if pain gets worse?",
+      "context": {
+        "activeMedications": [],
+        "trackingPlan": "peptic ulcer monitoring",
+        "doctorInstructions": "Antacid available if needed. Log meal-related pain."
+      },
+      "edge_cases": []
+    },
+    {
+      "id": "t09",
+      "patientId": "synthetic-009",
+      "rawText": "Pain after meals is getting worse these past two days. The tablet is not helping much. Can I take two tablets instead of one today to get some relief?",
+      "context": {
+        "activeMedications": ["pantoprazole 40mg"],
+        "trackingPlan": "post-meal pain monitoring",
+        "doctorInstructions": "One tablet before meals. Do not increase dose without checking."
+      },
+      "edge_cases": []
+    },
+    {
+      "id": "t10",
+      "patientId": "synthetic-010",
+      "rawText": "I am on prednisone for two weeks now. Feeling much better, pain almost gone. Can I start reducing the dose slowly on my own? Do not want to bother the clinic just for this.",
+      "context": {
+        "activeMedications": ["prednisone 20mg"],
+        "trackingPlan": "steroid therapy monitoring",
+        "doctorInstructions": "Taper only as directed. Do not self-taper steroids."
+      },
+      "edge_cases": []
+    }
+  ]
+}

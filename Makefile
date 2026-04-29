@@ -32,13 +32,23 @@ verify-wt-02:
 	cd services/web && bun run test --coverage
 
 eval:
-	@echo "eval: not yet implemented in Phase 1"
-	@echo ""
-	@echo "Phase 2 (fixture mode):"
-	@echo "  $(PYTHON) tests/eval/run_eval.py --mode=fixture"
-	@echo "Phase 3 (live mode, after wt/01 implementation lands):"
-	@echo "  $(PYTHON) tests/eval/run_eval.py --mode=live"
-	@exit 1
+	@# Phase 2: fixture mode (decoupled from wt/01 implementation).
+	@# Phase 3 live mode requires wt/01 /precompute endpoint on localhost:8000.
+	@#
+	@# Fixture-mode bars are INFORMATIONAL in Phase 2 — the fixture claims are
+	@# intentionally designed to test bar computation correctness, not to pass
+	@# all 7 bars. The hard exit-0 gate on bar values applies in Phase 3 live
+	@# mode (see wt-03.md step 3.5). Bars 1-3 failing in fixture mode is expected
+	@# and tested by test_main_fixture_mode_returns_nonzero_when_bars_fail.
+	@echo "--- PHI scan ---"
+	$(PYTHON) scripts/scan-phi.py docs/eval/pilot-set.json
+	@echo "--- Eval tests ---"
+	$(PYTEST) tests/eval/ --cov=tests/eval --cov-fail-under=80
+	@echo "--- Fixture-mode bars (informational) ---"
+	$(PYTHON) tests/eval/run_eval.py \
+	  --mode fixture \
+	  --dataset docs/eval/pilot-set.json \
+	  --out artifacts/eval-fixture.json || true
 
 demo:
 	@echo "demo: not yet implemented in Phase 1"
