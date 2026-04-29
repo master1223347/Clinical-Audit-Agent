@@ -1,0 +1,31 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`DualLayerInputView > snapshot: urgent fixture transcript renders both layers 1`] = `
+<p
+  class="whitespace-pre-wrap rounded-md border border-slate-200 bg-white p-4 text-base leading-7 text-slate-800"
+>
+  <span>
+    Today 
+  </span>
+  <mark
+    aria-label="claim evidence"
+    class="bg-evidence-200 text-evidence-700 underline decoration-evidence-500 decoration-2 underline-offset-2"
+    data-layer="evidence"
+  >
+    blood in my vomit and I fainted briefly
+  </mark>
+  <span>
+    . I feel very dizzy and 
+  </span>
+  <mark
+    aria-label="red-flag rule match without a claim"
+    class="bg-redflag-200 text-redflag-700 underline decoration-redflag-500 decoration-2 underline-offset-2"
+    data-layer="redflag"
+  >
+    cannot keep water down
+  </mark>
+  <span>
+    .
+  </span>
+</p>
+`;
