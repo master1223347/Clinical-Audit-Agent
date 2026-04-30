@@ -10,24 +10,37 @@ Also verifies structural guarantees:
   - --mode=live raises NotImplementedError (Phase 3, see wt-03.md step 3.5)
   - zero_claim_transcripts reported in result dict
   - zero-claim transcripts excluded from bars 1-3
+
+Live-mode coverage (Phase 3b, see wt-03.md step 3.5):
+  - compute_bar1_live, compute_bar2_live, compute_bar3_live read
+    doctorReviewStatus per claim; pending claims excluded from cohort.
+  - run_live_mode aggregates /precompute + /analyze/cached responses through
+    a httpx.MockTransport — verifies orchestrator wiring without a live server.
+  - _render_live_header emits valid JSON with the five required keys.
 """
 import json
 from pathlib import Path
 
+import httpx
 import pytest
 
 # conftest.py in this directory adds tests/eval/ to sys.path so this import works.
 from run_eval import (
     EvalMode,
+    _render_live_header,
+    _render_markdown,
     compute_bar1,
+    compute_bar1_live,
     compute_bar2,
+    compute_bar2_live,
     compute_bar3,
+    compute_bar3_live,
     compute_bar4,
     compute_bar5,
     compute_bar6,
     compute_bar7,
     run_fixture_mode,
-    _render_markdown,
+    run_live_mode,
 )
 
 _ROOT = Path(__file__).parent.parent.parent
@@ -332,3 +345,354 @@ def test_main_writes_json_output_file(tmp_path):
     assert "bars" in data
     assert "mode" in data
     assert data["mode"] == "fixture"
+
+
+# ── Live-mode bar 1: doctorReviewStatus + extractionType=direct ───────────────
+
+def test_bar1_live_excludes_pending_claims_from_cohort():
+    """Pending claims must not count in numerator OR denominator."""
+    claims = [
+        {"extractionType": "direct", "doctorReviewStatus": "accepted"},
+        {"extractionType": "direct", "doctorReviewStatus": "pending"},
+        {"extractionType": "direct", "doctorReviewStatus": "rejected"},
+    ]
+    # cohort = 2 reviewed (1 accepted, 1 rejected) → 0.5
+    assert compute_bar1_live(claims) == pytest.approx(0.5)
+
+
+def test_bar1_live_returns_none_when_all_pending():
+    """All-pending direct cohort = vacuous → None (informational PASS in live)."""
+    claims = [
+        {"extractionType": "direct", "doctorReviewStatus": "pending"},
+        {"extractionType": "direct", "doctorReviewStatus": "pending"},
+    ]
+    assert compute_bar1_live(claims) is None
+
+
+def test_bar1_live_returns_none_when_no_direct_claims():
+    claims = [{"extractionType": "interpretation", "doctorReviewStatus": "accepted"}]
+    assert compute_bar1_live(claims) is None
+
+
+def test_bar1_live_minor_wording_edit_counts_as_acceptance():
+    claims = [
+        {"extractionType": "direct", "doctorReviewStatus": "edited",
+         "doctorEditOrigin": "minor_wording"},
+        {"extractionType": "direct", "doctorReviewStatus": "edited",
+         "doctorEditOrigin": "correction"},
+    ]
+    # 1 of 2 reviewed counts as accepted → 0.5
+    assert compute_bar1_live(claims) == pytest.approx(0.5)
+
+
+def test_bar1_live_external_knowledge_override_does_not_count():
+    """external_knowledge_override is a substantive correction, not 'lightly edited'."""
+    claims = [
+        {"extractionType": "direct", "doctorReviewStatus": "edited",
+         "doctorEditOrigin": "external_knowledge_override"},
+    ]
+    assert compute_bar1_live(claims) == pytest.approx(0.0)
+
+
+# ── Live-mode bar 2: doctorReviewStatus + extractionType=interpretation ───────
+
+def test_bar2_live_non_rejected_count_as_accepted():
+    """Any reviewed interpretation claim that isn't 'rejected' counts."""
+    claims = [
+        {"extractionType": "interpretation", "doctorReviewStatus": "accepted"},
+        {"extractionType": "interpretation", "doctorReviewStatus": "edited",
+         "doctorEditOrigin": "external_knowledge_override"},
+        {"extractionType": "interpretation", "doctorReviewStatus": "rejected"},
+    ]
+    # 2 of 3 reviewed → 0.6667
+    assert compute_bar2_live(claims) == pytest.approx(2 / 3)
+
+
+def test_bar2_live_returns_none_when_all_pending():
+    claims = [{"extractionType": "interpretation", "doctorReviewStatus": "pending"}]
+    assert compute_bar2_live(claims) is None
+
+
+def test_bar2_live_returns_none_when_no_interpretation_claims():
+    claims = [{"extractionType": "direct", "doctorReviewStatus": "accepted"}]
+    assert compute_bar2_live(claims) is None
+
+
+# ── Live-mode bar 3: rejection rate across all reviewed claims ────────────────
+
+def test_bar3_live_excludes_pending():
+    claims = [
+        {"doctorReviewStatus": "accepted"},
+        {"doctorReviewStatus": "pending"},
+        {"doctorReviewStatus": "rejected"},
+        {"doctorReviewStatus": "edited", "doctorEditOrigin": "minor_wording"},
+    ]
+    # cohort = 3 reviewed (1 accepted, 1 rejected, 1 edited) → 1/3
+    assert compute_bar3_live(claims) == pytest.approx(1 / 3)
+
+
+def test_bar3_live_returns_none_when_all_pending():
+    claims = [{"doctorReviewStatus": "pending"}, {"doctorReviewStatus": "pending"}]
+    assert compute_bar3_live(claims) is None
+
+
+def test_bar3_live_zero_rejections_returns_zero():
+    claims = [
+        {"doctorReviewStatus": "accepted"},
+        {"doctorReviewStatus": "accepted"},
+    ]
+    assert compute_bar3_live(claims) == pytest.approx(0.0)
+
+
+# ── _render_live_header: required keys + valid JSON ───────────────────────────
+
+def test_render_live_header_produces_valid_json_with_required_keys():
+    result = {
+        "mode": "live",
+        "prompt_version_hash": "abc123",
+        "model_id": "claude-sonnet-4-6",
+        "dataset_size": 10,
+        "timestamp_utc": "2026-04-29T12:34:56Z",
+    }
+    rendered = _render_live_header(result)
+    parsed = json.loads(rendered)
+    assert parsed["mode"] == "live"
+    assert parsed["prompt_version_hash"] == "abc123"
+    assert parsed["model_id"] == "claude-sonnet-4-6"
+    assert parsed["dataset_size"] == 10
+    assert parsed["timestamp_utc"] == "2026-04-29T12:34:56Z"
+
+
+def test_render_live_header_handles_missing_optional_keys():
+    """Header must still be emittable when prompt_version_hash/model_id are blank."""
+    result = {"mode": "live"}
+    rendered = _render_live_header(result)
+    parsed = json.loads(rendered)
+    assert parsed["mode"] == "live"
+    assert parsed["prompt_version_hash"] == ""
+    assert parsed["model_id"] == ""
+    assert parsed["dataset_size"] == 0
+
+
+# ── run_live_mode orchestrator: httpx.MockTransport (in-process; no server) ──
+
+def _build_mock_response(transcript_id: str, *, escalation: bool = False,
+                        claims: list[dict] | None = None) -> dict:
+    """Mimic the AnalyzeResponse shape returned by /analyze/cached."""
+    return {
+        "inputId": transcript_id,
+        "promptVersionHash": "hash-test-001",
+        "modelId": "claude-sonnet-4-6",
+        "claims": claims or [],
+        "escalationMessage": "Please seek emergency help." if escalation else None,
+        "redFlagOnlySpans": (
+            [{"startChar": 0, "endChar": 5, "ruleKey": "chest_pain"}]
+            if escalation else []
+        ),
+        "createdAt": "2026-04-29T12:00:00+00:00",
+    }
+
+
+def _make_mock_transport(responses_by_id: dict[str, dict]) -> httpx.MockTransport:
+    """Mock /precompute (always 200) + /analyze/cached/{id} (lookup by id)."""
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "POST" and request.url.path == "/precompute":
+            return httpx.Response(
+                200,
+                json={"cached": 0, "refreshed": len(responses_by_id),
+                      "total": len(responses_by_id)},
+            )
+        if request.method == "GET" and request.url.path.startswith("/analyze/cached/"):
+            tid = request.url.path.rsplit("/", 1)[-1]
+            if tid in responses_by_id:
+                return httpx.Response(200, json=responses_by_id[tid])
+            return httpx.Response(404, json={"detail": "Not found"})
+        return httpx.Response(500, json={"detail": "unexpected"})
+    return httpx.MockTransport(handler)
+
+
+@pytest.fixture
+def fake_pilot_set(tmp_path: Path) -> Path:
+    """Tiny pilot-set.json with two transcripts (one urgent, one non-urgent)."""
+    data = {
+        "version": "1",
+        "transcripts": [
+            {
+                "id": "tA",
+                "patientId": "pA",
+                "rawText": "Severe breathing difficulty.",
+                "context": {},
+                "edge_cases": ["urgent_red_flag"],
+            },
+            {
+                "id": "tB",
+                "patientId": "pB",
+                "rawText": "Mild stomach upset.",
+                "context": {},
+                "edge_cases": ["vague"],
+            },
+        ],
+    }
+    out = tmp_path / "pilot-set.json"
+    out.write_text(json.dumps(data))
+    return out
+
+
+@pytest.fixture
+def fake_pilot_labels(tmp_path: Path) -> Path:
+    """Labels matching the fake_pilot_set transcripts."""
+    data = {
+        "version": "1",
+        "labels": {
+            "tA": {
+                "expected_urgent_claim": True,
+                "expected_red_flag_rules": ["severe_breathing_difficulty"],
+            },
+            "tB": {
+                "expected_urgent_claim": False,
+                "expected_red_flag_rules": [],
+            },
+        },
+    }
+    out = tmp_path / "pilot-set-labels.json"
+    out.write_text(json.dumps(data))
+    return out
+
+
+def test_run_live_mode_emits_header_fields(fake_pilot_set, fake_pilot_labels):
+    transport = _make_mock_transport({
+        "tA": _build_mock_response("tA", escalation=True),
+        "tB": _build_mock_response("tB", escalation=False),
+    })
+    with httpx.Client(transport=transport, base_url="http://test") as client:
+        result = run_live_mode(
+            host="http://test",
+            pilot_set_path=fake_pilot_set,
+            pilot_labels_path=fake_pilot_labels,
+            http_client=client,
+        )
+    assert result["mode"] == "live"
+    assert result["prompt_version_hash"] == "hash-test-001"
+    assert result["model_id"] == "claude-sonnet-4-6"
+    assert result["dataset_size"] == 2
+    assert "timestamp_utc" in result
+    assert result["host"] == "http://test"
+
+
+def test_run_live_mode_zero_claim_transcripts_counted(fake_pilot_set, fake_pilot_labels):
+    """Both transcripts return zero claims → zero_claim_transcripts == 2."""
+    transport = _make_mock_transport({
+        "tA": _build_mock_response("tA", escalation=True),
+        "tB": _build_mock_response("tB", escalation=False),
+    })
+    with httpx.Client(transport=transport, base_url="http://test") as client:
+        result = run_live_mode(
+            host="http://test",
+            pilot_set_path=fake_pilot_set,
+            pilot_labels_path=fake_pilot_labels,
+            http_client=client,
+        )
+    assert result["zero_claim_transcripts"] == 2
+
+
+def test_run_live_mode_bars_1_3_pass_when_all_pending(
+    fake_pilot_set, fake_pilot_labels
+):
+    """All claims pending → bars 1-3 vacuous → PASS informationally."""
+    pending_claim = {
+        "claimId": "11111111-1111-1111-1111-111111111111",
+        "extractionType": "direct",
+        "doctorReviewStatus": "pending",
+        "evidence": {"evidenceText": "severe breathing"},
+        "safetyStatus": "safe",
+    }
+    transport = _make_mock_transport({
+        "tA": _build_mock_response("tA", escalation=True, claims=[pending_claim]),
+        "tB": _build_mock_response("tB", escalation=False),
+    })
+    with httpx.Client(transport=transport, base_url="http://test") as client:
+        result = run_live_mode(
+            host="http://test",
+            pilot_set_path=fake_pilot_set,
+            pilot_labels_path=fake_pilot_labels,
+            http_client=client,
+        )
+    bars_by_num = {b["number"]: b for b in result["bars"]}
+    # bars 1-3 are vacuous (all-pending) → actual=None, passed=True
+    assert bars_by_num[1]["actual"] is None
+    assert bars_by_num[1]["passed"] is True
+    assert bars_by_num[2]["actual"] is None
+    assert bars_by_num[2]["passed"] is True
+    assert bars_by_num[3]["actual"] is None
+    assert bars_by_num[3]["passed"] is True
+
+
+def test_run_live_mode_bar6_passes_when_urgent_transcript_has_escalation(
+    fake_pilot_set, fake_pilot_labels
+):
+    transport = _make_mock_transport({
+        "tA": _build_mock_response("tA", escalation=True),
+        "tB": _build_mock_response("tB", escalation=False),
+    })
+    with httpx.Client(transport=transport, base_url="http://test") as client:
+        result = run_live_mode(
+            host="http://test",
+            pilot_set_path=fake_pilot_set,
+            pilot_labels_path=fake_pilot_labels,
+            http_client=client,
+        )
+    bars_by_num = {b["number"]: b for b in result["bars"]}
+    assert bars_by_num[6]["passed"] is True
+    assert bars_by_num[6]["actual"] == 1.0
+
+
+def test_run_live_mode_bar6_fails_when_urgent_transcript_silent(
+    fake_pilot_set, fake_pilot_labels
+):
+    """Urgent label but null escalationMessage → bar 6 must FAIL (sticky broken)."""
+    transport = _make_mock_transport({
+        "tA": _build_mock_response("tA", escalation=False),  # SILENT — bug
+        "tB": _build_mock_response("tB", escalation=False),
+    })
+    with httpx.Client(transport=transport, base_url="http://test") as client:
+        result = run_live_mode(
+            host="http://test",
+            pilot_set_path=fake_pilot_set,
+            pilot_labels_path=fake_pilot_labels,
+            http_client=client,
+        )
+    bars_by_num = {b["number"]: b for b in result["bars"]}
+    assert bars_by_num[6]["passed"] is False
+    assert result["all_pass"] is False
+
+
+def test_run_live_mode_raises_on_malformed_pilot_set(tmp_path, fake_pilot_labels):
+    """Invalid pilot-set.json (no 'transcripts' key) must raise — fail loud."""
+    bad = tmp_path / "bad.json"
+    bad.write_text(json.dumps({"version": "1"}))
+    with pytest.raises(ValueError, match="missing 'transcripts'"):
+        run_live_mode(
+            host="http://test",
+            pilot_set_path=bad,
+            pilot_labels_path=fake_pilot_labels,
+            http_client=httpx.Client(transport=_make_mock_transport({})),
+        )
+
+
+def test_run_live_mode_propagates_precompute_failure(
+    fake_pilot_set, fake_pilot_labels
+):
+    """Server returning 500 on /precompute must surface as HTTPStatusError."""
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/precompute":
+            return httpx.Response(500, json={"detail": "boom"})
+        return httpx.Response(404)
+    transport = httpx.MockTransport(handler)
+    with httpx.Client(transport=transport, base_url="http://test") as client:
+        with pytest.raises(httpx.HTTPStatusError):
+            run_live_mode(
+                host="http://test",
+                pilot_set_path=fake_pilot_set,
+                pilot_labels_path=fake_pilot_labels,
+                http_client=client,
+            )
