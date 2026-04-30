@@ -670,13 +670,36 @@ def test_run_live_mode_raises_on_malformed_pilot_set(tmp_path, fake_pilot_labels
     """Invalid pilot-set.json (no 'transcripts' key) must raise — fail loud."""
     bad = tmp_path / "bad.json"
     bad.write_text(json.dumps({"version": "1"}))
-    with pytest.raises(ValueError, match="missing 'transcripts'"):
-        run_live_mode(
-            host="http://test",
-            pilot_set_path=bad,
-            pilot_labels_path=fake_pilot_labels,
-            http_client=httpx.Client(transport=_make_mock_transport({})),
-        )
+    with httpx.Client(transport=_make_mock_transport({})) as client:
+        with pytest.raises(ValueError, match="missing 'transcripts'"):
+            run_live_mode(
+                host="http://test",
+                pilot_set_path=bad,
+                pilot_labels_path=fake_pilot_labels,
+                http_client=client,
+            )
+
+
+def test_run_live_mode_raises_on_malformed_labels(
+    tmp_path: Path, fake_pilot_set: Path
+) -> None:
+    """Invalid pilot-set-labels.json (JSON array, not object) must raise.
+
+    Without this guard, ``compute_bar6``/``compute_bar7`` silently fall back
+    to ``labels.get("labels", {}) → {}`` which produces a vacuous-pass 1.0
+    on bars 6 and 7 — masking a sticky-escalation regression. (python-reviewer
+    MEDIUM #3.)
+    """
+    bad_labels = tmp_path / "bad-labels.json"
+    bad_labels.write_text(json.dumps([{"version": "1"}]))
+    with httpx.Client(transport=_make_mock_transport({})) as client:
+        with pytest.raises(ValueError, match="labels file"):
+            run_live_mode(
+                host="http://test",
+                pilot_set_path=fake_pilot_set,
+                pilot_labels_path=bad_labels,
+                http_client=client,
+            )
 
 
 def test_run_live_mode_propagates_precompute_failure(

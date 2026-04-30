@@ -399,7 +399,14 @@ def run_live_mode(
             f"pilot-set at {pilot_set_path} missing 'transcripts' list"
         )
     transcripts: list[dict[str, Any]] = pilot_set["transcripts"]
-    labels: dict[str, Any] = _load_json(pilot_labels_path)  # type: ignore[assignment]
+
+    raw_labels = _load_json(pilot_labels_path)
+    if not isinstance(raw_labels, dict):
+        raise ValueError(
+            f"labels file {pilot_labels_path} must be a JSON object "
+            f"with a top-level 'labels' key; got {type(raw_labels).__name__}"
+        )
+    labels: dict[str, Any] = raw_labels
 
     owns_client = http_client is None
     client = http_client or httpx.Client(base_url=host, timeout=timeout_s)

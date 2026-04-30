@@ -62,10 +62,31 @@ def _canon(value: object) -> str:
     """Stable JSON serialization for byte-identity comparison.
 
     Uses sorted keys and tight separators so we catch whitespace and
-    key-order regressions on dicts/lists. Comparing parsed dicts via ``==``
+    key-order regressions on dicts. Comparing parsed dicts via ``==``
     silently normalizes both — that is exactly what this helper avoids.
+
+    Note: list element ORDER is preserved (json.dumps does not sort lists).
+    The escalation triple's only list field — ``redFlagOnlySpans`` — uses
+    :func:`_canon_spans` instead so semantically-equivalent reorderings of
+    rule matches do NOT trip the assertion as a false positive.
     """
     return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+
+def _canon_spans(spans: object) -> str:
+    """Order-insensitive canonical form for ``redFlagOnlySpans``.
+
+    Each span dict is canonicalised individually then the list is sorted
+    by canonical string. Catches content/key regressions on each span but
+    is robust to a server-side reorder of semantically-equivalent matches
+    (per python-reviewer MEDIUM #2).
+    """
+    if spans is None:
+        return _canon(None)
+    if not isinstance(spans, list):
+        return _canon(spans)
+    item_canons = sorted(_canon(item) for item in spans)
+    return "[" + ",".join(item_canons) + "]"
 
 
 def _load_urgent_transcript() -> dict:
@@ -110,10 +131,13 @@ def _escalation_signature(payload: dict) -> tuple[str, str, str | None]:
 
     ``createdAt`` is compared as a raw string so a server-side re-emit of
     the row (which would change the timestamp) is caught directly.
+    ``redFlagOnlySpans`` uses an order-insensitive canon (see
+    :func:`_canon_spans`) so the test catches content regressions but is
+    robust to span reordering.
     """
     return (
         _canon(payload.get("escalationMessage")),
-        _canon(payload.get("redFlagOnlySpans")),
+        _canon_spans(payload.get("redFlagOnlySpans")),
         payload.get("createdAt"),
     )
 
