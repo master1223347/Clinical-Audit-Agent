@@ -113,7 +113,11 @@ describe("postReviewClaim", () => {
       expect.objectContaining({
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ claimId: "claim-1", action: "accepted" }),
+        body: JSON.stringify({
+          doctorId: "pilot-doctor",
+          claimId: "claim-1",
+          action: "accepted",
+        }),
       }),
     );
   });

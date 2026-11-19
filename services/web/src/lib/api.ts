@@ -3,6 +3,8 @@ import type { AnalyzeResponse, DoctorAction, DoctorEditOrigin } from "@shared/ty
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
+const DOCTOR_ID = process.env.NEXT_PUBLIC_DOCTOR_ID ?? "pilot-doctor";
+
 export interface ReviewClaimPayload {
   claimId: string;
   action: DoctorAction;
@@ -58,7 +60,7 @@ export async function postReviewClaim(
   const res = await fetch(`${API_BASE}/review-claim`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ doctorId: DOCTOR_ID, ...payload }),
   });
   if (!res.ok) {
     throw new Error(`postReviewClaim: unexpected status ${res.status}`);

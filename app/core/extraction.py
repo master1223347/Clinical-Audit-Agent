@@ -148,6 +148,17 @@ PROMPT_VERSION_HASH: str = hashlib.sha256(_SYSTEM_PROMPT.encode()).hexdigest()
 
 _client: anthropic.Anthropic = anthropic.Anthropic()
 
+
+class ExtractionUnavailable(RuntimeError):
+    """Raised when the Anthropic client has no credentials configured."""
+
+
+def _require_credentials() -> None:
+    if not (getattr(_client, "api_key", None) or getattr(_client, "auth_token", None)):
+        raise ExtractionUnavailable(
+            "LLM extraction unavailable: ANTHROPIC_API_KEY is not set."
+        )
+
 _CACHED_SYSTEM_BLOCK: list[dict] = [
     {
         "type": "text",
@@ -315,6 +326,7 @@ def extract_claims_from_text(
 
     messages = [{"role": "user", "content": user_content}]
 
+    _require_credentials()
     response = _client.messages.create(
         model=MODEL_ID,
         max_tokens=4096,
